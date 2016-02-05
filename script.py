@@ -57,9 +57,23 @@ for i in range(train.shape[0]):
 Theta = np.random.rand( n_genres, n_users )
 
 # Optimization Process (CG)
+X = np.asarray(X, dtype='float')
 x0 = transformTo1Dparams(X, Theta)
-C = 5
-print CostFunction(x0, Y, R, n_movies, n_genres, C)
-result = optimize.fmin_cg( (lambda x: CostFunction(x, Y, R, n_movies, n_genres, C)), x0,
-           fprime=(lambda x: gradientCostFunction(x, Y, R, n_movies, n_genres, C)),
-           full_output=True, retall=True, disp=True)
+C = 5.0
+alpha = 0.0005
+Cost = 999999999999
+for iter in range(90):
+    tmp = R*(np.dot(X, Theta)-Y)
+    for i in range(n_movies):
+        for k in range(n_genres):
+            X[i, k] = X[i, k] - alpha * (np.dot(tmp[i,:], Theta[k,:])+X[i,k]/C)
+    tmp = R*(np.dot(X, Theta)-Y)
+    for j in range(n_users):
+        for k in range(n_genres):
+            Theta[k, j] = Theta[k, j] - alpha * (np.dot(tmp[:,j], X[:,k])+Theta[k,j]/C)
+    Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
+    if Cost_ > Cost :
+        alpha = alpha / 1.5
+    else:
+        Cost = Cost_
+        print Cost_
