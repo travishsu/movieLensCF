@@ -1,8 +1,17 @@
 
 import pandas as pd
 import numpy as np
+from scipy import optimize
 
 import datetime
+
+def transformTo1Dparams(X, Theta):
+    return np.concatenate((np.asarray(X).reshape((1,-1))[0], Theta.reshape((1,-1))[0]))
+
+def transformTo2Dparams(x, n_movies, n_genres):
+    X     = x[:n_movies*n_genres].reshape((-1,n_genres))
+    Theta = x[n_movies*n_genres:].reshape((n_genres,-1))
+    return X, Theta
 
 def CostFunction(x, Y, R, n_movies, n_genres, C):
     X, Theta = transformTo2Dparams(x, n_movies, n_genres)
@@ -18,19 +27,11 @@ def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
     tmp = R*(np.dot(X, Theta)-Y)
     for k in range(n_genres):
         for i in range(n_movies):
-            dX[i,k]     = np.dot(tmp[i, :], Theta[k,:]) + X[i, k]
+            dX[i,k]     = np.dot(tmp[i, :], Theta[k,:]) + X[i, k]/C
         for j in range(n_users):
-            dTheta[k,j] = np.dot(tmp[:,j], X[:,k])      + Theta[k, j]
+            dTheta[k,j] = np.dot(tmp[:,j], X[:,k])      + Theta[k, j]/C
     dx = transformTo1Dparams(dX, dTheta)
     return dx
-    
-def transformTo1Dparams(X, Theta):
-    return np.concatenate((np.asarray(X).reshape((1,-1))[0], Theta.reshape((1,-1))[0]))
-
-def transformTo2Dparams(x, n_movies, n_genres):
-    X     = x[:n_movies*n_genres].reshape((-1,n_genres))
-    Theta = x[n_movies*n_genres:].reshape((n_genres,-1))
-    return X, Theta
 
 def similarityOfMovies(mid_i, mid_j, X):
     return 1 / float(sum( (X.iloc[mid_i,:]-X.iloc[mid_j,:])**2 ))
@@ -56,6 +57,9 @@ for i in range(train.shape[0]):
 Theta = np.random.rand( n_genres, n_users )
 
 # Optimization Process (CG)
-x = transformTo1Dparams(X, Theta)
+x0 = transformTo1Dparams(X, Theta)
 C = 5
-print CostFunction(x, Y, R, n_movies, n_genres, C)
+print CostFunction(x0, Y, R, n_movies, n_genres, C)
+result = optimize.fmin_cg( (lambda x: CostFunction(x, Y, R, n_movies, n_genres, C)), x0,
+           fprime=(lambda x: gradientCostFunction(x, Y, R, n_movies, n_genres, C)),
+           full_output=True, retall=True, disp=True)
