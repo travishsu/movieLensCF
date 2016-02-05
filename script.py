@@ -15,8 +15,8 @@ def transformTo2Dparams(x, n_movies, n_genres):
 
 def CostFunction(x, Y, R, n_movies, n_genres, C):
     X, Theta = transformTo2Dparams(x, n_movies, n_genres)
-    regularization_term = sum(x**2)/(2*C)
-    J = (((R*(np.dot(X, Theta)-Y)))**2).sum()/2 + regularization_term
+    regularization_term = sum(np.power(x,2))/(2*C)
+    J = (np.power((R*(np.dot(X, Theta)-Y)),2)).sum()/2 + regularization_term
     return J
 
 def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
@@ -34,7 +34,7 @@ def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
     return dx
 
 def similarityOfMovies(mid_i, mid_j, X):
-    return 1 / float(sum( (X.iloc[mid_i,:]-X.iloc[mid_j,:])**2 ))
+    return 1 / float(sum( np.power(X.iloc[mid_i,:]-X.iloc[mid_j,:],2) ))
 
 movie = pd.read_table('ml-100k/u.item', sep='|', header=None)
 
