@@ -56,35 +56,30 @@ for i in range(train.shape[0]):
 Theta = 0.001*np.random.rand( n_genres, n_users )
 X = np.asarray(X, dtype='float')
 
-# reduce to smaller dataset
-n_movies_small = 50
-X_small     = X[:n_movies_small, :]
-R_small     = R[:n_movies_small, :]
-Y_small     = Y[:n_movies_small, :]
 
 # Optimization Process (CG)
 C = 500.0
-alpha = 0.00005
+test_iter = 20
+test_alpha = np.linspace(1,10,10)* 0.0001
+rate_cost = np.zeros((test_iter,test_alpha.shape[0]))
 
-for iter in range(10000):
-    tmp = R_small*(np.dot(X_small, Theta)-Y_small)
-    X_small = X_small - alpha * (np.dot(tmp, Theta.T)+X_small/C)
-    tmp = R_small*(np.dot(X_small, Theta)-Y_small)
-    Theta = Theta - alpha * (np.dot(X_small.T, tmp)+Theta/C)
-    Cost_ =  CostFunction(transformTo1Dparams(X_small, Theta), Y_small, R_small, n_movies_small, n_genres, C)
+import matplotlib.pyplot as plt
+for r in range(test_alpha.shape[0]):
+    alpha = test_alpha[r]
+    for iter in range(test_iter):
+        tmp = R*(np.dot(X, Theta)-Y)
+        X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
+        tmp = R*(np.dot(X, Theta)-Y)
+        Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
+        Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
 
-    print Cost_, (tmp**2).sum(), alpha
+        print Cost_, (tmp**2).sum(), alpha
+        rate_cost[iter, r] = Cost_
+    if not (np.isinf(np.max(rate_cost[:,r])) or np.isna(np.max(rate_cost[:,r]))):
+        plt.plot(range(test_iter), rate_cost[:,r])
 
-# Optimization Process 2
-X[:n_movies_small, :] = X_small
-C = 500.0
-alpha = 0.000033
+plt.xlabel('CG Iteration')
+plt.ylabel('Log of Cost')
+plt.show()
 
-for iter in range(10000):
-    tmp = R*(np.dot(X, Theta)-Y)
-    X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
-    tmp = R*(np.dot(X, Theta)-Y)
-    Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
-    Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
-
-    print Cost_, (tmp**2).sum(), alpha
+# Conclusion: 0.0002 ~ 0.0003
