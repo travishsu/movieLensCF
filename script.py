@@ -16,8 +16,7 @@ def transformTo2Dparams(x, n_movies, n_genres):
 def CostFunction(x, Y, R, n_movies, n_genres, C):
     X, Theta = transformTo2Dparams(x, n_movies, n_genres)
     regularization_term = sum(np.power(x,2))/(2*C)
-    J = (np.power((R*(np.dot(X, Theta)-Y)),2)).sum()/2 + regularization_term
-    return J
+    return (np.power((R*(np.dot(X, Theta)-Y)),2)).sum()/2 + regularization_term
 
 def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
     X, Theta = transformTo2Dparams(x, n_movies, n_genres)
@@ -25,13 +24,9 @@ def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
     dTheta = np.empty(Theta.shape)
 
     tmp = R*(np.dot(X, Theta)-Y)
-    for k in range(n_genres):
-        for i in range(n_movies):
-            dX[i,k]     = np.dot(tmp[i, :], Theta[k,:]) + X[i, k]/C
-        for j in range(n_users):
-            dTheta[k,j] = np.dot(tmp[:,j], X[:,k])      + Theta[k, j]/C
-    dx = transformTo1Dparams(dX, dTheta)
-    return dx
+    dX     = np.dot(tmp, Theta.T) + X/C
+    dTheta = np.dot(X.T, tmp)     + Theta/C
+    return transformTo1Dparams(dX, dTheta)
 
 def similarityOfMovies(mid_i, mid_j, X):
     return 1 / float(sum( np.power(X.iloc[mid_i,:]-X.iloc[mid_j,:],2) ))
@@ -58,7 +53,7 @@ Theta = np.random.rand( n_genres, n_users )
 
 # Optimization Process (CG)
 x0 = transformTo1Dparams(X, Theta)
-C = 5
+C = 100
 print CostFunction(x0, Y, R, n_movies, n_genres, C)
 result = optimize.fmin_cg( (lambda x: CostFunction(x, Y, R, n_movies, n_genres, C)), x0,
            fprime=(lambda x: gradientCostFunction(x, Y, R, n_movies, n_genres, C)),
