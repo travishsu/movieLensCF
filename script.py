@@ -54,26 +54,32 @@ for i in range(train.shape[0]):
     R[train.mid[i]-1][train.uid[i]-1]=1
     Y[train.mid[i]-1][train.uid[i]-1]=train.rating[i]
 
-Theta = np.random.rand( n_genres, n_users )
+Theta = 0.001*np.random.rand( n_genres, n_users )
 
 # Optimization Process (CG)
 X = np.asarray(X, dtype='float')
 x0 = transformTo1Dparams(X, Theta)
-C = 5.0
-alpha = 0.0005
+C = 500.0
+alpha = 0.0006
 Cost = 999999999999
-for iter in range(90):
+Costbst = Cost
+for iter in range(1000):
     tmp = R*(np.dot(X, Theta)-Y)
-    for i in range(n_movies):
-        for k in range(n_genres):
-            X[i, k] = X[i, k] - alpha * (np.dot(tmp[i,:], Theta[k,:])+X[i,k]/C)
+    X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
     tmp = R*(np.dot(X, Theta)-Y)
-    for j in range(n_users):
-        for k in range(n_genres):
-            Theta[k, j] = Theta[k, j] - alpha * (np.dot(tmp[:,j], X[:,k])+Theta[k,j]/C)
+    Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
     Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
-    if Cost_ > Cost :
-        alpha = alpha / 1.5
-    else:
-        Cost = Cost_
-        print Cost_
+    if Cost_>Cost:
+        alpha = alpha / (Cost_/Cost)
+    elif np.abs(Cost_-Cost) < 1000:
+        alpha = 0.0006
+    Cost = Cost_
+    if Cost_ < Costbst:
+        Xbst=X
+        Thetabst=Theta
+        Costbst=Cost_
+        print "change"
+    elif iter>0:
+        X = Xbst
+        Theta = Thetabst
+    print Cost_, (tmp**2).sum(), alpha, CostFunction(transformTo1Dparams(Xbst, Thetabst), Y, R, n_movies, n_genres, C)
