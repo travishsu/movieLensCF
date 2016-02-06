@@ -59,8 +59,8 @@ X = np.asarray(X, dtype='float')
 
 # Optimization Process (CG)
 C = 500.0
-test_iter = 20
-test_alpha = np.linspace(1,10,10)* 0.0001
+test_iter = 100
+test_alpha = np.linspace(0,10,11)* 0.00001 + 0.0002
 rate_cost = np.zeros((test_iter,test_alpha.shape[0]))
 
 import matplotlib.pyplot as plt
@@ -75,11 +75,12 @@ for r in range(test_alpha.shape[0]):
 
         print Cost_, (tmp**2).sum(), alpha
         rate_cost[iter, r] = Cost_
-    if not (np.isinf(np.max(rate_cost[:,r])) or np.isna(np.max(rate_cost[:,r]))):
+    if not (np.isinf(np.max(rate_cost[:,r])) or np.isnan(np.max(rate_cost[:,r]))):
         plt.plot(range(test_iter), rate_cost[:,r])
 
 plt.xlabel('CG Iteration')
 plt.ylabel('Log of Cost')
 plt.show()
 
-# Conclusion: 0.0002 ~ 0.0003
+# Conclusion1: 0.0002 ~ 0.0003
+# Conclusion2: 0.00020 ~ 0.00026
