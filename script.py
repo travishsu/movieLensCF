@@ -60,26 +60,13 @@ Theta = 0.001*np.random.rand( n_genres, n_users )
 X = np.asarray(X, dtype='float')
 x0 = transformTo1Dparams(X, Theta)
 C = 500.0
-alpha = 0.0006
-Cost = 999999999999
-Costbst = Cost
+alpha = 0.0002
+
 for iter in range(1000):
     tmp = R*(np.dot(X, Theta)-Y)
     X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
     tmp = R*(np.dot(X, Theta)-Y)
     Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
     Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
-    if Cost_>Cost:
-        alpha = alpha / (Cost_/Cost)
-    elif np.abs(Cost_-Cost) < 1000:
-        alpha = 0.0006
-    Cost = Cost_
-    if Cost_ < Costbst:
-        Xbst=X
-        Thetabst=Theta
-        Costbst=Cost_
-        print "change"
-    elif iter>0:
-        X = Xbst
-        Theta = Thetabst
-    print Cost_, (tmp**2).sum(), alpha, CostFunction(transformTo1Dparams(Xbst, Thetabst), Y, R, n_movies, n_genres, C)
+
+    print Cost_, (tmp**2).sum(), alpha
