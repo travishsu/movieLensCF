@@ -53,16 +53,34 @@ Y = R
 for i in range(train.shape[0]):
     R[train.mid[i]-1][train.uid[i]-1]=1
     Y[train.mid[i]-1][train.uid[i]-1]=train.rating[i]
-
 Theta = 0.001*np.random.rand( n_genres, n_users )
+X = np.asarray(X, dtype='float')
+
+# reduce to smaller dataset
+n_movies_small = 50
+X_small     = X[:n_movies_small, :]
+R_small     = R[:n_movies_small, :]
+Y_small     = Y[:n_movies_small, :]
 
 # Optimization Process (CG)
-X = np.asarray(X, dtype='float')
-x0 = transformTo1Dparams(X, Theta)
 C = 500.0
-alpha = 0.0002
+alpha = 0.00005
 
-for iter in range(1000):
+for iter in range(10000):
+    tmp = R_small*(np.dot(X_small, Theta)-Y_small)
+    X_small = X_small - alpha * (np.dot(tmp, Theta.T)+X_small/C)
+    tmp = R_small*(np.dot(X_small, Theta)-Y_small)
+    Theta = Theta - alpha * (np.dot(X_small.T, tmp)+Theta/C)
+    Cost_ =  CostFunction(transformTo1Dparams(X_small, Theta), Y_small, R_small, n_movies_small, n_genres, C)
+
+    print Cost_, (tmp**2).sum(), alpha
+
+# Optimization Process 2
+X[:n_movies_small, :] = X_small
+C = 500.0
+alpha = 0.000033
+
+for iter in range(10000):
     tmp = R*(np.dot(X, Theta)-Y)
     X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
     tmp = R*(np.dot(X, Theta)-Y)
