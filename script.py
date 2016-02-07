@@ -68,6 +68,8 @@ for i in range(test.shape[0]):
 Theta = 0.001*np.random.rand( n_genres, n_users )
 X = np.asarray(X, dtype='float')
 
+X_init = X
+Theta_init = Theta
 
 # Optimization Process (CG)
 alpha = 0.00025
@@ -77,6 +79,8 @@ lambda_cost = np.zeros((2,test_lambda.shape[0]))
 
 import matplotlib.pyplot as plt
 for r in range(test_lambda.shape[0]):
+    X = X_init
+    Theta = Theta_init
     Cost = np.zeros((2,test_iter))
     C = test_lambda[r]
     for iter in range(test_iter):
