@@ -33,6 +33,14 @@ def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
     dx = transformTo1Dparams(dX, dTheta)
     return dx
 
+def CostFunctionTest(x, Y_all, R, n_movies, n_genres, C, test):
+    X, Theta = transformTo2Dparams(x, n_movies, n_genres)
+
+    regularization_term = sum(np.power(x,2))/(2*C)
+    R = np.abs(R-1)
+    J = (np.power((R*(np.dot(X, Theta)-Y_all)),2)).sum()/2 + regularization_term
+    return J
+
 def similarityOfMovies(mid_i, mid_j, X):
     return 1 / float(sum( np.power(X.iloc[mid_i,:]-X.iloc[mid_j,:],2) ))
 
@@ -53,33 +61,41 @@ Y = R
 for i in range(train.shape[0]):
     R[train.mid[i]-1][train.uid[i]-1]=1
     Y[train.mid[i]-1][train.uid[i]-1]=train.rating[i]
+
+Y_all = Y
+for i in range(test.shape[0]):
+    Y_all[test.mid[i]-1, test.uid[i]-1] = test.rating[i]
 Theta = 0.001*np.random.rand( n_genres, n_users )
 X = np.asarray(X, dtype='float')
 
 
 # Optimization Process (CG)
-C = 500.0
-test_iter = 100
-test_alpha = np.linspace(0,10,11)* 0.00001 + 0.0002
-rate_cost = np.zeros((test_iter,test_alpha.shape[0]))
+alpha = 0.00025
+test_iter = 200
+test_lambda = np.linspace(10,500,50)
+lambda_cost = np.zeros((2,test_lambda.shape[0]))
 
 import matplotlib.pyplot as plt
-for r in range(test_alpha.shape[0]):
-    alpha = test_alpha[r]
+for r in range(test_lambda.shape[0]):
+    Cost = np.zeros((2,test_iter))
+    C = test_lambda[r]
     for iter in range(test_iter):
         tmp = R*(np.dot(X, Theta)-Y)
         X = X - alpha * (np.dot(tmp, Theta.T)+X/C)
         tmp = R*(np.dot(X, Theta)-Y)
         Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
         Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
+        Cost_test = CostFunctionTest(transformTo1Dparams(X, Theta), Y_all, R, n_movies, n_genres, C, test)
+        print Cost_, Cost_test, C
+        Cost[0, iter] = Cost_
+        Cost[1, iter] = Cost_test
+    lambda_cost[0,r] = np.min(Cost[0,:])
+    lambda_cost[1,r] = np.min(Cost[1,:])
+plt.plot(range(test_lambda.shape[0]), lambda_cost[0,:])
+plt.plot(range(test_lambda.shape[0]), lambda_cost[1,:])
 
-        print Cost_, (tmp**2).sum(), alpha
-        rate_cost[iter, r] = Cost_
-    if not (np.isinf(np.max(rate_cost[:,r])) or np.isnan(np.max(rate_cost[:,r]))):
-        plt.plot(range(test_iter), rate_cost[:,r])
-
-plt.xlabel('CG Iteration')
-plt.ylabel('Log of Cost')
+plt.xlabel('Lamda')
+plt.ylabel('Cost')
 plt.show()
 
 # Conclusion1: 0.0002 ~ 0.0003
