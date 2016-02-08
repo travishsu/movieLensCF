@@ -5,33 +5,21 @@ from scipy import optimize
 
 import datetime
 
-def transformTo1Dparams(X, Theta):
-    return np.concatenate((np.asarray(X).reshape((1,-1))[0], Theta.reshape((1,-1))[0]))
-
-def transformTo2Dparams(x, n_movies, n_genres):
-    X     = x[:n_movies*n_genres].reshape((-1,n_genres))
-    Theta = x[n_movies*n_genres:].reshape((n_genres,-1))
-    return X, Theta
-
-def CostFunction(x, Y, R, n_movies, n_genres, C):
-    X, Theta = transformTo2Dparams(x, n_movies, n_genres)
-    regularization_term = sum(np.power(x,2))/(2*C)
-    J = (np.power((R*(np.dot(X, Theta)-Y)),2)).sum()/2 + regularization_term
+def CostFunction(X, Theta, Y, R, n_movies, n_genres):
+    J = (np.power((R*(np.dot(X, Theta)-Y)),2)).sum()/2
     return J
 
-def gradientCostFunction(x, Y, R, n_movies, n_genres, C):
-    X, Theta = transformTo2Dparams(x, n_movies, n_genres)
+def gradientCostFunction(X, Theta, Y, R, n_movies, n_genres):
     dX     = np.empty(X.shape)
     dTheta = np.empty(Theta.shape)
 
     tmp = R*(np.dot(X, Theta)-Y)
     for k in range(n_genres):
         for i in range(n_movies):
-            dX[i,k]     = np.dot(tmp[i, :], Theta[k,:]) + X[i, k]/C
+            dX[i,k]     = np.dot(tmp[i, :], Theta[k,:])
         for j in range(n_users):
-            dTheta[k,j] = np.dot(tmp[:,j], X[:,k])      + Theta[k, j]/C
-    dx = transformTo1Dparams(dX, dTheta)
-    return dx
+            dTheta[k,j] = np.dot(tmp[:,j], X[:,k])
+    return dX, dTheta
 
 def CostFunctionTest(x, Y_all, R, n_movies, n_genres, C, test):
     X, Theta = transformTo2Dparams(x, n_movies, n_genres)
@@ -41,9 +29,16 @@ def CostFunctionTest(x, Y_all, R, n_movies, n_genres, C, test):
     J = (np.power((R*(np.dot(X, Theta)-Y_all)),2)).sum()/2 + regularization_term
     return J
 
-def similarityOfMovies(mid_i, mid_j, X):
-    return 1 / float(sum( np.power(X.iloc[mid_i,:]-X.iloc[mid_j,:],2) ))
-
+def distanceOfMovies(mid_i, mid_j, X):
+    return float(sum( np.power(X.iloc[mid_i,:]-X.iloc[mid_j,:],2) ))
+def distanceOfUsers(uid_i, uid_j, Y_inserted):
+    return float(sum( np.power(Y_inserted[:,uid_i]-Y_inserted[:,uid_j,],2) ))
+def KNNusers(uid, K, Y_inserted):
+    distanceAllUsers = np.ones(Y.shape[1])
+    for i in range(Y.shape[1]):
+        distanceAllUsers[i] = distanceOfUsers(uid, i, Y_inserted)
+    indice = np.argsort(distanceAllUsers)
+    return Y[np.ix_(range(Y.shape[0]), indice[:K])]
 movie = pd.read_table('ml-100k/u.item', sep='|', header=None)
 
 train = pd.read_table('ml-100k/u1.base', header=None, names=['uid', 'mid', 'rating', 'timestamp'])
@@ -57,25 +52,28 @@ n_genres = movie.iloc[:,5:].shape[1]
 
 X = movie.iloc[:,5:]
 R = np.zeros( (n_movies, n_users) )
-Y = R
+Y = np.zeros( (n_movies, n_users) )
 for i in range(train.shape[0]):
     R[train.mid[i]-1][train.uid[i]-1]=1
     Y[train.mid[i]-1][train.uid[i]-1]=train.rating[i]
-
-Y_all = Y
-for i in range(test.shape[0]):
-    Y_all[test.mid[i]-1, test.uid[i]-1] = test.rating[i]
-Theta = 0.001*np.random.rand( n_genres, n_users )
+    if np.isnan(train.rating[i]):
+        print 2
+Y_inserted = Y.copy()
+movie_avg = np.sum(Y,axis=1) / np.sum(R,axis=1)
+for i in range(movie_avg.shape[0]):
+    if np.isnan(movie_avg[i]):
+        movie_avg[i] = 0
+for uid in range(n_users):
+    for i in range(Y.shape[0]):
+        if R[i,uid]==0:
+            Y_inserted[i,uid] = movie_avg[i]
+        if R[i,uid]==0:
+            Y_inserted[i,uid] = movie_avg[i]
 X = np.asarray(X, dtype='float')
-
 X_init = X
-Theta_init = Theta
 
 # Optimization Process (CG)
-alpha = 0.0003
-test_iter = 200
-test_lambda = np.linspace(10,500,50)
-lambda_cost = np.zeros((2,test_lambda.shape[0]))
+K = n_users/5
 
 import matplotlib.pyplot as plt
 for r in range(test_lambda.shape[0]):
