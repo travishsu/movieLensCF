@@ -72,7 +72,7 @@ X_init = X
 Theta_init = Theta
 
 # Optimization Process (CG)
-alpha = 0.00025
+alpha = 0.0003
 test_iter = 200
 test_lambda = np.linspace(10,500,50)
 lambda_cost = np.zeros((2,test_lambda.shape[0]))
@@ -90,11 +90,11 @@ for r in range(test_lambda.shape[0]):
         Theta = Theta - alpha * (np.dot(X.T, tmp)+Theta/C)
         Cost_ =  CostFunction(transformTo1Dparams(X, Theta), Y, R, n_movies, n_genres, C)
         Cost_test = CostFunctionTest(transformTo1Dparams(X, Theta), Y_all, R, n_movies, n_genres, C, test)
-        print Cost_, Cost_test, C
+        print Cost_/train.shape[0], Cost_test/test.shape[0], C
         Cost[0, iter] = Cost_
         Cost[1, iter] = Cost_test
-    lambda_cost[0,r] = np.min(Cost[0,:])
-    lambda_cost[1,r] = np.min(Cost[1,:])
+    lambda_cost[0,r] = np.min(Cost[0,:])/train.shape[0]
+    lambda_cost[1,r] = np.min(Cost[1,:])/test.shape[0]
 plt.plot(range(test_lambda.shape[0]), lambda_cost[0,:])
 plt.plot(range(test_lambda.shape[0]), lambda_cost[1,:])
 
