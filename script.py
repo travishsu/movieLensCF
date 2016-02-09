@@ -36,16 +36,16 @@ indice_movie_rating = [i for i in range(n_movies) if np.sum(R[i,:])!=0]
 Y_reduced = Y_inserted[np.ix_(indice_movie_rating,range(Y.shape[1]))]
 R_reduced = R[np.ix_(indice_movie_rating,range(Y.shape[1]))]
 
-Y_mu = Y.sum(axis=0)/R.sum(axis=0)
-for i in range(n_users):
-    Y[np.ix_([k for k in range(n_movies) if R[k,i]==0],[i])] = Y_mu[i]
-weights    = np.zeros((n_users,n_users))
+Y_mu = Y.sum(axis=1)/R.sum(axis=1)
+for i in range(n_movies):
+    Y[np.ix_([i],[k for k in range(n_users) if R[i,k]==0])] = Y_mu[i]
+weights    = np.zeros((n_movies,n_movies))
 diff       = np.empty((n_movies, n_users))
-std_rating = np.empty(n_users)
+std_rating = np.empty(n_movies)
 
 # Pearson correlation
-for i in range(n_users):
-    diff[:,i] = Y[:,i]-Y_mu[i]
+for i in range(n_movies):
+    diff[:,i] = Y[i,:]-Y_mu[i]
     std_rating[i] = diff[:,i].std()
 for i in range(n_users):
     for j in range(n_users):
