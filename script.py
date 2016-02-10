@@ -33,6 +33,7 @@ for i in range(n_movies):
 
 # Predict
 pred_correlation = np.empty(test.shape[0])
+pred_flag        = pred_correlation.copy()
 pred_cosine      = pred_correlation.copy()
 thredhold = 0.00001
 for test_id in range(test.shape[0]):
@@ -44,8 +45,11 @@ for test_id in range(test.shape[0]):
     val_positive_difference = (diff[np.ix_(idx_positive_weights,[a])].T)[0] * (R[np.ix_(idx_positive_weights,[a])].T)[0]
     pred_correlation[test_id] = Y_mu[i] + np.dot(val_positive_difference,val_positive_weights)/(val_positive_weights.sum())
 
+    pred_flag[test_id] = 1
+pred_has_pred = [i for i in range(test.shape[0]) if pred_flag[i]]
+
 # Validation
-error   = test.rating - pred_correlation
+error   = test.rating.iloc[pred_has_pred] - pred_correlation[np.ix_(pred_has_pred)]
 correct = np.array([error[i] for i in range(test.shape[0]) if np.abs(error[i])<0.5])
 correct_proportion = correct.shape[0]/float(test.shape[0])
 print correct_proportion
