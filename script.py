@@ -36,6 +36,7 @@ pred_correlation = np.empty(test.shape[0])
 pred_flag        = pred_correlation.copy()
 pred_cosine      = pred_correlation.copy()
 thredhold = 0.00001
+tolerence = 1
 for test_id in range(test.shape[0]):
     a = test.uid[test_id]
     i = test.mid[test_id]
@@ -50,6 +51,12 @@ pred_has_pred = [i for i in range(test.shape[0]) if pred_flag[i]]
 
 # Validation
 error   = test.rating.iloc[pred_has_pred] - pred_correlation[np.ix_(pred_has_pred)]
-correct = np.array([error[i] for i in range(test.shape[0]) if np.abs(error[i])<0.5])
+correct = np.array([error[i] for i in range(test.shape[0]) if np.abs(error[i])<tolerence])
 correct_proportion = correct.shape[0]/float(test.shape[0])
+
+
+error.hist()
+plt.xlabel("Prediction Error")
+plt.ylabel("Frequency")
+plt.title("Item-based CF")
 print correct_proportion
