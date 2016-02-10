@@ -1,65 +1,54 @@
 import pandas as pd
 import numpy as np
-import datetime
-from scipy import optimize
 
-def distanceOfUsers(uid_i, uid_j, Y_inserted):
-    return float(sum( np.power(Y_inserted[:,uid_i]-Y_inserted[:,uid_j,],2) ))
-def KNNusers(uid, K, Y_inserted):
-    distanceAllUsers = np.ones(Y.shape[1])
-    for i in range(Y.shape[1]):
-        distanceAllUsers[i] = distanceOfUsers(uid, i, Y_inserted)
-    indice = np.argsort(distanceAllUsers)
-    return Y[np.ix_(range(Y.shape[0]), indice[1:K+1])]
-
-movie = pd.read_table('ml-100k/u.item', sep='|', header=None)
-
+# Load data
 train = pd.read_table('ml-100k/u2.base', header=None, names=['uid', 'mid', 'rating', 'timestamp'])
 test  = pd.read_table('ml-100k/u2.test', header=None, names=['uid', 'mid', 'rating', 'timestamp'])
 
-train.timestamp = [datetime.datetime.fromtimestamp(int(s)) for s in train.timestamp]
-
 n_users  = int(train.describe().loc['max', 'uid'])
 n_movies = int(train.describe().loc['max', 'mid'])
-n_genres = movie.iloc[:,5:].shape[1]
 
-X = movie.iloc[:,5:]
-X = np.asarray(X, dtype='float')
-R = np.zeros( (n_movies, n_users) )
-Y = R.copy()
+# Transform
+Y = np.zeros( (n_movies, n_users) )
+R = Y.copy()
 for i in range(train.shape[0]):
-    R[train.mid[i]-1][train.uid[i]-1]=1
-    Y[train.mid[i]-1][train.uid[i]-1]=train.rating[i]
-
-Y_inserted = Y.copy()
-indice_movie_rating = [i for i in range(n_movies) if np.sum(R[i,:])!=0]
-Y_reduced = Y_inserted[np.ix_(indice_movie_rating,range(Y.shape[1]))]
-R_reduced = R[np.ix_(indice_movie_rating,range(Y.shape[1]))]
+    Y[train.mid[i]-1][train.uid[i]-1] = train.rating[i]
+    R[train.mid[i]-1][train.uid[i]-1] = 1
 
 Y_mu = Y.sum(axis=1)/R.sum(axis=1)
+# Fill mean of each movie to no-rating
 for i in range(n_movies):
     Y[np.ix_([i],[k for k in range(n_users) if R[i,k]==0])] = Y_mu[i]
-weights    = np.zeros((n_movies,n_movies))
+
+# Allocate
+weights    = np.empty((n_movies,n_movies))
 diff       = np.empty((n_movies, n_users))
 std_rating = np.empty(n_movies)
 
-# Pearson correlation
 for i in range(n_movies):
-    diff[:,i] = Y[i,:]-Y_mu[i]
-    std_rating[i] = diff[:,i].std()
-for i in range(n_users):
-    for j in range(n_users):
-        weights[i,j] = np.dot(diff[:,i], diff[:,j])/(std_rating[i]*std_rating[j])
+    diff[i,:] = Y[i,:]-Y_mu[i]
+    std_rating[i] = diff[i,:].std()
 
-# Test
-pred = np.empty(test.shape[0])
+# Weighting (Pearson correlation)
+for i in range(n_movies):
+    for j in range(n_movies):
+        weights[i,j] = np.dot(diff[i,:], diff[j,:])/(std_rating[i]*std_rating[j])
+
+# Predict
+pred_correlation = np.empty(test.shape[0])
+pred_cosine      = pred_correlation.copy()
+thredhold = 800
 for test_id in range(test.shape[0]):
     a = test.uid[test_id]
     i = test.mid[test_id]
 
-    pred[test_id] = Y_mu[a] + np.dot(diff[i,:],weights[:,a])/(weights[:,a].sum())
+    idx_positive_weights = np.array([j for j in range(weights.shape[0]) if weights[i,j]>thredhold])
+    val_positive_weights = weights[np.ix_([i],idx_positive_weights)][0]
+    dif_positive_weights = (diff[np.ix_(idx_positive_weights,[a])].T)[0]
+    pred_correlation[test_id] = Y_mu[i] + np.dot(dif_positive_weights,val_positive_weights)/(val_positive_weights.sum())
 
-print ((test.rating - pred)**2).sum()/test.shape[0]
-error   = test.rating - pred
+# Validation
+error   = test.rating - pred_correlation
 correct = np.array([error[i] for i in range(test.shape[0]) if np.abs(error[i])<0.5])
-correct_proportion = correct.shape[0]/test.shape[0]
+correct_proportion = correct.shape[0]/float(test.shape[0])
+print correct_proportion
