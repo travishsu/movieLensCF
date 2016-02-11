@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Load data
 train = pd.read_table('ml-100k/u2.base', header=None, names=['uid', 'mid', 'rating', 'timestamp'])
@@ -55,8 +56,9 @@ correct = np.array([error[i] for i in range(test.shape[0]) if np.abs(error[i])<t
 correct_proportion = correct.shape[0]/float(test.shape[0])
 
 
-error.hist()
-plt.xlabel("Prediction Error")
+error.hist(bins=200)
+plt.xlabel("Prediction Error (Rating - Prediction)")
 plt.ylabel("Frequency")
 plt.title("Item-based CF")
 print correct_proportion
+plt.show()
